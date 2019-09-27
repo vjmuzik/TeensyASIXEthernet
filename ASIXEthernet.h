@@ -38,7 +38,10 @@ public:
     void setHandleRecieve(void (*fptr)(const uint8_t* data, uint16_t length)) {
         handleRecieve = fptr;
     }
-    uint8_t nodeID[6];
+    void readPHY(uint32_t address, uint16_t *data);
+    void writePHY(uint32_t address, uint16_t data);
+    uint8_t nodeID[6]; //Also known as MAC address
+    volatile bool initialized;
 protected:
     virtual bool claim(Device_t *device, int type, const uint8_t *descriptors, uint32_t len);
     virtual void control(const Transfer_t *transfer);

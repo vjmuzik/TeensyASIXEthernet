@@ -28,16 +28,15 @@
 #define print   USBHost::print_
 #define println USBHost::println_
 
-void ASIXEthernet::init()
-{
+void ASIXEthernet::init() {
     contribute_Pipes(mypipes, sizeof(mypipes)/sizeof(Pipe_t));
     contribute_Transfers(mytransfers, sizeof(mytransfers)/sizeof(Transfer_t));
     contribute_String_Buffers(mystring_bufs, sizeof(mystring_bufs)/sizeof(strbuf_t));
     handleRecieve = NULL;
+    initialized = false;
     driver_ready_for_device(this);
 }
-bool ASIXEthernet::claim(Device_t *dev, int type, const uint8_t *descriptors, uint32_t len)
-{
+bool ASIXEthernet::claim(Device_t *dev, int type, const uint8_t *descriptors, uint32_t len) {
     
     const uint8_t *p = descriptors;
     const uint8_t *end = p + len;
@@ -166,8 +165,7 @@ bool ASIXEthernet::claim(Device_t *dev, int type, const uint8_t *descriptors, ui
     return (rxpipe || txpipe || interruptpipe);
 }
 
-void ASIXEthernet::control(const Transfer_t *transfer)
-{
+void ASIXEthernet::control(const Transfer_t *transfer) {
     println("control callback (asix) ", pending_control, DEC);
     control_queued = false;
 pending:
@@ -248,6 +246,8 @@ pending:
             pending_control = 12;
             break;
         case 12:                                                        //Ethernet/HomePNA PHY Address Register    PHY address from ROM 11h    0xE010 (default)
+            //The value read here should technically be used later on when
+            //reading/writing the PHY, but is currently not being used
             if(verify[0] != 0x01) {
                 pending_control = 10;
                 goto pending;
@@ -299,7 +299,7 @@ pending:
             control_queued = true;
             pending_control = 20;
             break;
-        case 20:                                                        //Read Node ID Register            6 bytes 00 50 b6 be 8b b4
+        case 20:                                                        //Read Node ID Register            6 bytes 00 50 b6 be 8b b4 MAC address, also read earlier
             mk_setup(setup, 0xC0, 19, 0x0000, 0, 6);
             queue_Control_Transfer(device, &setup, nodeID, this);
             control_queued = true;
@@ -464,7 +464,7 @@ pending:
             pending_control = 46;
             break;
         case 46:                                                        //Write Rx Control Register    98 03  Strt Op, MCast, BCast, RX Hdr Mode
-            mk_setup(setup, 0x40, 16, 0x0398, 0, 0);
+            mk_setup(setup, 0x40, 16, 0x03D8, 0, 0);
             queue_Control_Transfer(device, &setup, NULL, this);
             control_queued = true;
             pending_control = 47;
@@ -580,10 +580,12 @@ pending:
             pending_control = 254;
         case 65:{                                                       //This sets the multicast address filter array bitmap, I haven't been able to figure out how this is supposed to be calculated. Their manual doesn't specify to well and all my efforts have been deadends. Setting all these to 0xFF lets all multicast messages through lowering bandwidth for other messages.
             mk_setup(setup, 0x40, 22, 0x0000, 0, 8);
-            uint8_t xfr[8] = {B01000000,B10000000,0x20,0x40,B10000000,0x00,0x80,B00010000};
+//            uint8_t xfr[8] = {B01000000,B10000000,0x20,0x40,B10000000,0x00,0x80,B00010000};
+            uint8_t xfr[8] = {0,0,0,0,0,0,0,0};
             queue_Control_Transfer(device, &setup, xfr, this);
             control_queued = true;
             pending_control = 254;
+            initialized = true;
             break;}
         default:
             return;
@@ -592,28 +594,25 @@ pending:
         println("Done");
 }
 
-void ASIXEthernet::rx_callback(const Transfer_t *transfer)
-{
-    println("rx_callback(asix)");
+void ASIXEthernet::rx_callback(const Transfer_t *transfer) {
+//    println("rx_callback(asix)");
     if (transfer->driver) {
-        print("transfer->qtd.token = ");
-        println(transfer->qtd.token & 255);
+//        print("transfer->qtd.token = ");
+//        println(transfer->qtd.token & 255);
         ((ASIXEthernet *)(transfer->driver))->rx_data(transfer);
     }
 }
 
-void ASIXEthernet::tx_callback(const Transfer_t *transfer)
-{
-    println("tx_callback(asix)");
+void ASIXEthernet::tx_callback(const Transfer_t *transfer) {
+//    println("tx_callback(asix)");
     if (transfer->driver) {
-        print("transfer->qtd.token = ");
-        println(transfer->qtd.token & 255);
+//        print("transfer->qtd.token = ");
+//        println(transfer->qtd.token & 255);
         ((ASIXEthernet *)(transfer->driver))->tx_data(transfer);
     }
 }
 
-void ASIXEthernet::interrupt_callback(const Transfer_t *transfer)
-{
+void ASIXEthernet::interrupt_callback(const Transfer_t *transfer) {
 //    println("interrupt_callback(asix)");
     if (transfer->driver) {
 //        print("transfer->qtd.token = ");
@@ -622,41 +621,37 @@ void ASIXEthernet::interrupt_callback(const Transfer_t *transfer)
     }
 }
 
-void ASIXEthernet::disconnect()
-{
+void ASIXEthernet::disconnect() {
     rxpipe = NULL;
     txpipe = NULL;
     interruptpipe = NULL;
     println("Device Disconnected...");
 }
 
-void ASIXEthernet::rx_data(const Transfer_t *transfer)
-{
+void ASIXEthernet::rx_data(const Transfer_t *transfer) {
     //Current header format is: bytes 0-1 = Packet Length LSB-MSB
     //Current header format is: bytes 2-3 = One's Complement Packet Length LSB-MSB
     //Current header format is: bytes 4-5 = Packet Type information and checksum error detected
     //Current header format is: bytes 6-(length + 6) is ethernet packet
     //Current header format is: bytes (length + 7)-end ie last 3 bytes is unknown possible crc
     uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
-    println("rx_data(asix): ", len, DEC);
-    print_hexbytes((uint8_t*)transfer->buffer, (len < 32)? len : 32 );
-    println("queue another receive packet");
+//    println("rx_data(asix): ", len, DEC);
+//    print_hexbytes((uint8_t*)transfer->buffer, (len < 32)? len : 32 );
+//    println("queue another receive packet");
     queue_Data_Transfer(rxpipe, rx_buffer, rx_size, this);
     rx_packet_queued = true;
     (*handleRecieve)((uint8_t*)transfer->buffer, len);
 }
 
-void ASIXEthernet::tx_data(const Transfer_t *transfer)
-{
+void ASIXEthernet::tx_data(const Transfer_t *transfer) {
     uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
     println("tx_data(asix): ", len, DEC);
     print_hexbytes((uint8_t*)transfer->buffer, (len < 32)? len : 32 );
     tx_packet_queued = false;
 }
 
-void ASIXEthernet::interrupt_data(const Transfer_t *transfer)
-{
-    uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
+void ASIXEthernet::interrupt_data(const Transfer_t *transfer) {
+//    uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
     const uint8_t *p = (const uint8_t *)transfer->buffer;
     
     if((*(p+2) & 1) == 1 && pending_control == 255) {
@@ -674,8 +669,7 @@ void ASIXEthernet::interrupt_data(const Transfer_t *transfer)
     queue_Data_Transfer(interruptpipe, interrupt_buffer, interrupt_size, this);
 }
 
-bool ASIXEthernet::read()
-{
+bool ASIXEthernet::read() {
     if(!rxpipe) return false;
     if(pending_control != 254) return false;
     if (!rx_packet_queued && rxpipe) {
@@ -701,6 +695,25 @@ void ASIXEthernet::sendPacket(const uint8_t *data, uint16_t length) {
     for(uint16_t i = 0; i < length; i++) {
         tx_buffer[i + 4] = *data++;
     }
+    if(length < 64) {
+        for(uint16_t i = length + 4; i < 64 + 4; i++) {
+            tx_buffer[i] = 0;
+        }
+        length = 64;
+    }
     queue_Data_Transfer(txpipe, tx_buffer, length + 4, this);
     tx_packet_queued = true;
+}
+
+void ASIXEthernet::readPHY(uint32_t address, uint16_t *data) {
+    mk_setup(setup, 0xc0, 7, 0x0010, address, 2);
+    queue_Control_Transfer(device, &setup, data, this);
+    control_queued = true;
+}
+
+void ASIXEthernet::writePHY(uint32_t address, uint16_t data) {
+    mk_setup(setup, 0x40, 8, 0x0010, address, 2);
+    uint8_t xfr[2] = {(uint8_t)(data & 0xFF), (uint8_t)((data >> 8) & 0xFF)};
+    queue_Control_Transfer(device, &setup, xfr, this);
+    control_queued = true;
 }
