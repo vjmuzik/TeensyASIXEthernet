@@ -79,12 +79,12 @@ private:
     
     setup_t setup;
     uint8_t setupdata[16];
-    uint8_t rx_buffer[512];
-    uint8_t tx_buffer[512];
+    uint8_t rx_buffer[3028];
+    uint8_t tx_buffer[3028]; //Buffers large enough for 2 full size packets
     uint8_t interrupt_buffer[8];
     
     Pipe_t mypipes[4] __attribute__ ((aligned(32)));
-    Transfer_t mytransfers[12] __attribute__ ((aligned(32)));
+    Transfer_t mytransfers[14] __attribute__ ((aligned(32)));
     strbuf_t mystring_bufs[1];
     void (*handleRecieve)(const uint8_t *data, uint16_t length);
 };

@@ -636,7 +636,7 @@ void ASIXEthernet::rx_data(const Transfer_t *transfer) {
     //Current header format is: bytes (length + 7)-end ie last 3 bytes is unknown possible crc
     uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
 //    println("rx_data(asix): ", len, DEC);
-//    print_hexbytes((uint8_t*)transfer->buffer, (len < 32)? len : 32 );
+//    print_hexbytes((uint8_t*)transfer->buffer, len);
 //    println("queue another receive packet");
     queue_Data_Transfer(rxpipe, rx_buffer, rx_size, this);
     rx_packet_queued = true;
@@ -646,7 +646,7 @@ void ASIXEthernet::rx_data(const Transfer_t *transfer) {
 void ASIXEthernet::tx_data(const Transfer_t *transfer) {
     uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
     println("tx_data(asix): ", len, DEC);
-    print_hexbytes((uint8_t*)transfer->buffer, (len < 32)? len : 32 );
+    print_hexbytes((uint8_t*)transfer->buffer, len);
     tx_packet_queued = false;
 }
 
@@ -695,14 +695,24 @@ void ASIXEthernet::sendPacket(const uint8_t *data, uint16_t length) {
     for(uint16_t i = 0; i < length; i++) {
         tx_buffer[i + 4] = *data++;
     }
-    if(length < 64) {
+    if(length < 64) {   //Add padding bytes for small messages
         for(uint16_t i = length + 4; i < 64 + 4; i++) {
             tx_buffer[i] = 0;
         }
         length = 64;
     }
-    queue_Data_Transfer(txpipe, tx_buffer, length + 4, this);
-    tx_packet_queued = true;
+    length += 4; //Add header size
+    uint16_t _index = 0;
+    while(length > 512) { //Send ceunks if large message
+        queue_Data_Transfer(txpipe, tx_buffer + _index, 512, this);
+        tx_packet_queued = true;
+        length -= 512;
+        _index += 512;
+    }
+    if(length){
+        queue_Data_Transfer(txpipe, tx_buffer + _index, length, this);
+        tx_packet_queued = true;
+    }
 }
 
 void ASIXEthernet::readPHY(uint32_t address, uint16_t *data) {
