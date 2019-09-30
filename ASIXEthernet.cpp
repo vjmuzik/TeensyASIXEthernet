@@ -34,6 +34,7 @@ void ASIXEthernet::init() {
     contribute_String_Buffers(mystring_bufs, sizeof(mystring_bufs)/sizeof(strbuf_t));
     handleRecieve = NULL;
     initialized = false;
+    connected = false;
     driver_ready_for_device(this);
 }
 bool ASIXEthernet::claim(Device_t *dev, int type, const uint8_t *descriptors, uint32_t len) {
@@ -586,6 +587,7 @@ pending:
             control_queued = true;
             pending_control = 254;
             initialized = true;
+            connected = true;
             break;}
         default:
             return;
@@ -625,6 +627,7 @@ void ASIXEthernet::disconnect() {
     rxpipe = NULL;
     txpipe = NULL;
     interruptpipe = NULL;
+    connected = 0;
     println("Device Disconnected...");
 }
 
@@ -647,7 +650,7 @@ void ASIXEthernet::tx_data(const Transfer_t *transfer) {
     uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
     println("tx_data(asix): ", len, DEC);
     print_hexbytes((uint8_t*)transfer->buffer, len);
-    tx_packet_queued = false;
+    tx_packet_queued--;
 }
 
 void ASIXEthernet::interrupt_data(const Transfer_t *transfer) {
@@ -663,6 +666,7 @@ void ASIXEthernet::interrupt_data(const Transfer_t *transfer) {
     }
     else if((*(p+2) & 1) == 0 && pending_control == 254) {
         pending_control = 255;
+        connected = false;
     }
 //    println("interrupt_data(asix): ", len, DEC);
 //    print_hexbytes((uint8_t*)transfer->buffer, (len < 32)? len : 32 );
@@ -681,7 +685,7 @@ bool ASIXEthernet::read() {
 }
 
 void ASIXEthernet::sendPacket(const uint8_t *data, uint16_t length) {
-    if (tx_packet_queued || !txpipe) return;
+    if (tx_packet_queued >= 8 || !txpipe) return;
     if(pending_control != 254) return;
     //Insert USB Header to data message
     //This is the default format and the most basic
@@ -703,21 +707,21 @@ void ASIXEthernet::sendPacket(const uint8_t *data, uint16_t length) {
     }
     length += 4; //Add header size
     uint16_t _index = 0;
-    while(length > 512) { //Send ceunks if large message
+    while(length > 512) { //Send chunks if large message
         queue_Data_Transfer(txpipe, tx_buffer + _index, 512, this);
-        tx_packet_queued = true;
+        tx_packet_queued++;
         length -= 512;
         _index += 512;
     }
     if(length){
         queue_Data_Transfer(txpipe, tx_buffer + _index, length, this);
-        tx_packet_queued = true;
+        tx_packet_queued++;
     }
 }
 
 void ASIXEthernet::readPHY(uint32_t address, uint16_t *data) {
     mk_setup(setup, 0xc0, 7, 0x0010, address, 2);
-    queue_Control_Transfer(device, &setup, data, this);
+    queue_Control_Transfer(device, &setup, (uint8_t*)data, this);
     control_queued = true;
 }
 

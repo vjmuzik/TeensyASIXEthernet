@@ -42,6 +42,7 @@ public:
     void writePHY(uint32_t address, uint16_t data);
     uint8_t nodeID[6]; //Also known as MAC address
     volatile bool initialized;
+    volatile bool connected;
 protected:
     virtual bool claim(Device_t *device, int type, const uint8_t *descriptors, uint32_t len);
     virtual void control(const Transfer_t *transfer);
@@ -67,7 +68,7 @@ private:
     uint16_t tx_interval = 0;
     uint16_t interrupt_interval = 0;
     bool rx_packet_queued;
-    bool tx_packet_queued;
+    uint8_t tx_packet_queued;
     bool interrupt_packet_queued;
     bool control_queued;
     uint8_t pending_control;
@@ -84,7 +85,7 @@ private:
     uint8_t interrupt_buffer[8];
     
     Pipe_t mypipes[4] __attribute__ ((aligned(32)));
-    Transfer_t mytransfers[14] __attribute__ ((aligned(32)));
+    Transfer_t mytransfers[16] __attribute__ ((aligned(32)));
     strbuf_t mystring_bufs[1];
     void (*handleRecieve)(const uint8_t *data, uint16_t length);
 };
