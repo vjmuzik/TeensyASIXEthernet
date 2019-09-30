@@ -1,26 +1,24 @@
-/*
- * USBEthernet Teensy36 USB Host Mass Storage library
- * Copyright (c) 2019 Warren Watson.
+/* USB ASIXEthernet driver for Teensy 3.6/4.0
+ * Copyright 2019 vjmuzik (vjmuzik1@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #ifndef ASIXEthernet_h
@@ -67,7 +65,7 @@ private:
     uint16_t rx_interval = 0;
     uint16_t tx_interval = 0;
     uint16_t interrupt_interval = 0;
-    bool rx_packet_queued;
+    uint8_t rx_packet_queued;
     uint8_t tx_packet_queued;
     bool interrupt_packet_queued;
     bool control_queued;
@@ -80,12 +78,13 @@ private:
     
     setup_t setup;
     uint8_t setupdata[16];
-    uint8_t rx_buffer[3028];
-    uint8_t tx_buffer[3028]; //Buffers large enough for 2 full size packets
+    static const uint8_t bufSize = 16;
+    uint8_t rx_buffer[512*bufSize];
+    uint8_t tx_buffer[512*bufSize]; //Large buffer = more speed 
     uint8_t interrupt_buffer[8];
     
     Pipe_t mypipes[4] __attribute__ ((aligned(32)));
-    Transfer_t mytransfers[16] __attribute__ ((aligned(32)));
+    Transfer_t mytransfers[24] __attribute__ ((aligned(32)));
     strbuf_t mystring_bufs[1];
     void (*handleRecieve)(const uint8_t *data, uint16_t length);
 };

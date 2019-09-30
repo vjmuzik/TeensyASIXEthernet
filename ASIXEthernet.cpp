@@ -1,25 +1,24 @@
-/* USBEthernet Teensy36 USB Host Ethernet library
- * Copyright (c) 2019 Warren Watson.
+/* USB ASIXEthernet driver for Teensy 3.6/4.0
+ * Copyright 2019 vjmuzik (vjmuzik1@gmail.com)
  *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include <Arduino.h>
@@ -131,8 +130,8 @@ bool ASIXEthernet::claim(Device_t *dev, int type, const uint8_t *descriptors, ui
         rxpipe = new_Pipe(dev, 2, rx_ep, 1, rx_size, rx_interval);
         if (rxpipe) {
             rxpipe->callback_function = rx_callback;
-            queue_Data_Transfer(rxpipe, rx_buffer, rx_size, this);
-            rx_packet_queued = true;
+            queue_Data_Transfer(rxpipe, rx_buffer, rx_size*bufSize, this);
+            rx_packet_queued++;
         }
     } else {
         rxpipe = NULL;
@@ -641,8 +640,9 @@ void ASIXEthernet::rx_data(const Transfer_t *transfer) {
 //    println("rx_data(asix): ", len, DEC);
 //    print_hexbytes((uint8_t*)transfer->buffer, len);
 //    println("queue another receive packet");
-    queue_Data_Transfer(rxpipe, rx_buffer, rx_size, this);
-    rx_packet_queued = true;
+    rx_packet_queued--;
+    queue_Data_Transfer(rxpipe, rx_buffer, rx_size*bufSize, this);
+    rx_packet_queued++;
     (*handleRecieve)((uint8_t*)transfer->buffer, len);
 }
 
@@ -678,8 +678,9 @@ bool ASIXEthernet::read() {
     if(pending_control != 254) return false;
     if (!rx_packet_queued && rxpipe) {
         NVIC_DISABLE_IRQ(IRQ_USBHS);
-        queue_Data_Transfer(rxpipe, rx_buffer, rx_size, this);
+        queue_Data_Transfer(rxpipe, rx_buffer, rx_size*bufSize, this);
         NVIC_ENABLE_IRQ(IRQ_USBHS);
+        rx_packet_queued++;
     }
     return true;
 }
