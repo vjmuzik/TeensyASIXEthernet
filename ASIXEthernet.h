@@ -32,8 +32,8 @@ public:
     ASIXEthernet(USBHost &host) { init(); }
     ASIXEthernet(USBHost *host) { init(); }
     bool read();
-    void sendPacket(const uint8_t* data, uint16_t length);
-    void setHandleRecieve(void (*fptr)(const uint8_t* data, uint16_t length)) {
+    void sendPacket(const uint8_t* data, uint32_t length);
+    void setHandleRecieve(void (*fptr)(const uint8_t* data, uint32_t length)) {
         handleRecieve = fptr;
     }
     void readPHY(uint32_t address, uint16_t *data);
@@ -78,15 +78,15 @@ private:
     
     setup_t setup;
     uint8_t setupdata[16];
-    static const uint8_t bufSize = 16;
+    static const uint8_t bufSize = 32;
     uint8_t rx_buffer[512*bufSize];
-    uint8_t tx_buffer[512*bufSize]; //Large buffer = more speed 
+    uint8_t tx_buffer[512*bufSize]; //Large buffer = more speed
     uint8_t interrupt_buffer[8];
     
     Pipe_t mypipes[4] __attribute__ ((aligned(32)));
     Transfer_t mytransfers[24] __attribute__ ((aligned(32)));
     strbuf_t mystring_bufs[1];
-    void (*handleRecieve)(const uint8_t *data, uint16_t length);
+    void (*handleRecieve)(const uint8_t *data, uint32_t length);
 };
 
 #endif /* ASIXEthernet_h */

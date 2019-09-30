@@ -685,7 +685,7 @@ bool ASIXEthernet::read() {
     return true;
 }
 
-void ASIXEthernet::sendPacket(const uint8_t *data, uint16_t length) {
+void ASIXEthernet::sendPacket(const uint8_t *data, uint32_t length) {
     if (tx_packet_queued >= 8 || !txpipe) return;
     if(pending_control != 254) return;
     //Insert USB Header to data message
