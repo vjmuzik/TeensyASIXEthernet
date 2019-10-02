@@ -41,6 +41,7 @@ public:
     uint8_t nodeID[6]; //Also known as MAC address
     volatile bool initialized;
     volatile bool connected;
+    volatile bool PHYSpeed;
 protected:
     virtual bool claim(Device_t *device, int type, const uint8_t *descriptors, uint32_t len);
     virtual void control(const Transfer_t *transfer);
@@ -78,13 +79,14 @@ private:
     
     setup_t setup;
     uint8_t setupdata[16];
-    static const uint8_t bufSize = 32;
-    uint8_t rx_buffer[512*bufSize];
+    static const uint8_t bufSize = 8;
+    static const uint32_t transferSize = 4096 * 4;
+    uint8_t rx_buffer[16384 * 1];
     uint8_t tx_buffer[512*bufSize]; //Large buffer = more speed
     uint8_t interrupt_buffer[8];
     
     Pipe_t mypipes[4] __attribute__ ((aligned(32)));
-    Transfer_t mytransfers[24] __attribute__ ((aligned(32)));
+    Transfer_t mytransfers[32] __attribute__ ((aligned(32)));
     strbuf_t mystring_bufs[1];
     void (*handleRecieve)(const uint8_t *data, uint32_t length);
 };

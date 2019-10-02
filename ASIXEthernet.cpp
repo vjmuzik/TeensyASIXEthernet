@@ -130,7 +130,7 @@ bool ASIXEthernet::claim(Device_t *dev, int type, const uint8_t *descriptors, ui
         rxpipe = new_Pipe(dev, 2, rx_ep, 1, rx_size, rx_interval);
         if (rxpipe) {
             rxpipe->callback_function = rx_callback;
-            queue_Data_Transfer(rxpipe, rx_buffer, rx_size*bufSize, this);
+            queue_Data_Transfer(rxpipe, rx_buffer, transferSize, this);
             rx_packet_queued++;
         }
     } else {
@@ -640,10 +640,10 @@ void ASIXEthernet::rx_data(const Transfer_t *transfer) {
 //    println("rx_data(asix): ", len, DEC);
 //    print_hexbytes((uint8_t*)transfer->buffer, len);
 //    println("queue another receive packet");
-    rx_packet_queued--;
-    queue_Data_Transfer(rxpipe, rx_buffer, rx_size*bufSize, this);
-    rx_packet_queued++;
     (*handleRecieve)((uint8_t*)transfer->buffer, len);
+    rx_packet_queued--;
+    queue_Data_Transfer(rxpipe, rx_buffer, transferSize, this);
+    rx_packet_queued++;
 }
 
 void ASIXEthernet::tx_data(const Transfer_t *transfer) {
@@ -656,15 +656,15 @@ void ASIXEthernet::tx_data(const Transfer_t *transfer) {
 void ASIXEthernet::interrupt_data(const Transfer_t *transfer) {
 //    uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
     const uint8_t *p = (const uint8_t *)transfer->buffer;
-    
-    if((*(p+2) & 1) == 1 && pending_control == 255) {
+    PHYSpeed = (p[2] & 0x10) ? 1 : 0;
+    if(((p[2] & 0x1) ? 1 : 0) == 1 && pending_control == 255) {
         pending_control = 48;
         mk_setup(setup, 0x40, 6, 0x0000, 0, 0);
         queue_Control_Transfer(device, &setup, NULL, this);
         control_queued = true;
         pending_control = 49;
     }
-    else if((*(p+2) & 1) == 0 && pending_control == 254) {
+    else if(((p[2] & 0x1) ? 1 : 0) == 0 && pending_control == 254) {
         pending_control = 255;
         connected = false;
     }
@@ -678,7 +678,7 @@ bool ASIXEthernet::read() {
     if(pending_control != 254) return false;
     if (!rx_packet_queued && rxpipe) {
         NVIC_DISABLE_IRQ(IRQ_USBHS);
-        queue_Data_Transfer(rxpipe, rx_buffer, rx_size*bufSize, this);
+        queue_Data_Transfer(rxpipe, rx_buffer, transferSize, this);
         NVIC_ENABLE_IRQ(IRQ_USBHS);
         rx_packet_queued++;
     }
