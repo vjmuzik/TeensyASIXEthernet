@@ -432,8 +432,13 @@ pending:
             control_queued = true;
             pending_control = 41;
             break;
-        case 41:                                                        //Write unknown            8F 85 66 86
-            mk_setup(setup, 0x40, 42, 0x858F, 34406, 0);
+        case 41:                                                        //Write transfer size
+            //0x8000, 0x8001 2k buffers
+            //0x8300, 0x83D7 8k buffers
+            //0x8400, 0x851E 16k buffers
+            //0x8600, 0x87AE 24k buffers
+            //0x8700, 0x8A3D 32k buffers
+            mk_setup(setup, 0x40, 42, 0x8000, 0x8001, 0);
             queue_Control_Transfer(device, &setup, NULL, this);
             control_queued = true;
             pending_control = 42;
@@ -570,15 +575,21 @@ pending:
             mk_setup(setup, 0xC0, 26, 0x0000, 0, 2);
             queue_Control_Transfer(device, &setup, setupdata, this);
             control_queued = true;
+            pending_control = 64;
+            break;
+        case 64:                                                        //Write transfer size
+            //0x8000, 0x8001 2k buffers
+            //0x8300, 0x83D7 8k buffers
+            //0x8400, 0x851E 16k buffers
+            //0x8600, 0x87AE 24k buffers
+            //0x8700, 0x8A3D 32k buffers
+            mk_setup(setup, 0x40, 42, 0x8000, 0x8001, 0);
+            queue_Control_Transfer(device, &setup, NULL, this);
+            control_queued = true;
             pending_control = 65;
             break;
-        case 64:                                                        //Write unknown            8F 85 66 86 Not sure if this is needed, seemed to freeze here at some point so it's ignored for now
-            mk_setup(setup, 0x40, 42, 0x858F, 34406, 0);
-//            queue_Control_Transfer(device, &setup, setupdata, this);
-            control_queued = true;
-            queue_Data_Transfer(rxpipe, rx_buffer, 512, this);
-            pending_control = 254;
-        case 65:{                                                       //This sets the multicast address filter array bitmap, I haven't been able to figure out how this is supposed to be calculated. Their manual doesn't specify to well and all my efforts have been deadends. Setting all these to 0xFF lets all multicast messages through lowering bandwidth for other messages.
+            
+        case 65:{                                                       //This sets the multicast address filter array bitmap, I haven't been able to figure out how this is supposed to be calculated. Their manual doesn't specify too well and all my efforts have been deadends. Setting all these to 0xFF lets all multicast messages through lowering bandwidth for other messages.
             mk_setup(setup, 0x40, 22, 0x0000, 0, 8);
 //            uint8_t xfr[8] = {B01000000,B10000000,0x20,0x40,B10000000,0x00,0x80,B00010000};
             uint8_t xfr[8] = {0,0,0,0,0,0,0,0};
