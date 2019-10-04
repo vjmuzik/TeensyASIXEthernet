@@ -38,6 +38,7 @@ public:
     }
     void readPHY(uint32_t address, uint16_t *data);
     void writePHY(uint32_t address, uint16_t data);
+    void setMulticast(uint8_t *hashTable);
     uint8_t nodeID[6]; //Also known as MAC address
     volatile bool initialized;
     volatile bool connected;

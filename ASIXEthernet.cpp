@@ -743,3 +743,9 @@ void ASIXEthernet::writePHY(uint32_t address, uint16_t data) {
     queue_Control_Transfer(device, &setup, xfr, this);
     control_queued = true;
 }
+
+void ASIXEthernet::setMulticast(uint8_t *hashTable) {
+    mk_setup(setup, 0x40, 22, 0x0000, 0, 8);
+    queue_Control_Transfer(device, &setup, hashTable, this);
+    control_queued = true;
+}
