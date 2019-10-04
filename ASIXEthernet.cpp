@@ -697,7 +697,7 @@ bool ASIXEthernet::read() {
 }
 
 void ASIXEthernet::sendPacket(const uint8_t *data, uint32_t length) {
-    if (tx_packet_queued >= 8 || !txpipe) return;
+    if (tx_packet_queued >= 16 || !txpipe) return;
     if(pending_control != 254) return;
     //Insert USB Header to data message
     //This is the default format and the most basic
@@ -719,11 +719,11 @@ void ASIXEthernet::sendPacket(const uint8_t *data, uint32_t length) {
     }
     length += 4; //Add header size
     uint16_t _index = 0;
-    while(length > 512) { //Send chunks if large message
-        queue_Data_Transfer(txpipe, tx_buffer + _index, 512, this);
+    while(length > transferSize) { //Send chunks if large message
+        queue_Data_Transfer(txpipe, tx_buffer + _index, transferSize, this);
         tx_packet_queued++;
-        length -= 512;
-        _index += 512;
+        length -= transferSize;
+        _index += transferSize;
     }
     if(length){
         queue_Data_Transfer(txpipe, tx_buffer + _index, length, this);
