@@ -36,6 +36,7 @@ void ASIXEthernet::init() {
     connected = false;
     driver_ready_for_device(this);
 }
+
 bool ASIXEthernet::claim(Device_t *dev, int type, const uint8_t *descriptors, uint32_t len) {
     
     const uint8_t *p = descriptors;
@@ -703,6 +704,17 @@ void ASIXEthernet::sendPacket(const uint8_t *data, uint32_t length) {
     //This is the default format and the most basic
     //it can be changed to an alternate format
     //but this is the simplest one that works fine
+    if(current_tx_buffer == 0) tx_buffer = (uint8_t*)tx_buffer1;
+    else if(current_tx_buffer == 1) tx_buffer = (uint8_t*)tx_buffer2;
+    else if(current_tx_buffer == 2) tx_buffer = (uint8_t*)tx_buffer3;
+    else if(current_tx_buffer == 3) tx_buffer = (uint8_t*)tx_buffer4;
+    else if(current_tx_buffer == 4) tx_buffer = (uint8_t*)tx_buffer5;
+    else if(current_tx_buffer == 5) tx_buffer = (uint8_t*)tx_buffer6;
+    else if(current_tx_buffer == 6) tx_buffer = (uint8_t*)tx_buffer7;
+    else if(current_tx_buffer == 7) tx_buffer = (uint8_t*)tx_buffer8;
+    if(current_tx_buffer == 7) current_tx_buffer = 0;
+    else current_tx_buffer++;
+    
     tx_buffer[0] = length & 0x00FF;     //Length of packet LSB
     tx_buffer[1] = (length >> 8) & 0x7; //Length of packet MSB
     tx_buffer[2] = ~length & 0x00FF;                //One's complement Length of packet LSB
@@ -719,11 +731,11 @@ void ASIXEthernet::sendPacket(const uint8_t *data, uint32_t length) {
     }
     length += 4; //Add header size
     uint16_t _index = 0;
-    while(length > transferSize) { //Send chunks if large message
-        queue_Data_Transfer(txpipe, tx_buffer + _index, transferSize, this);
+    while(length > transmitSize) { //Send chunks if large message
+        queue_Data_Transfer(txpipe, tx_buffer + _index, transmitSize, this);
         tx_packet_queued++;
-        length -= transferSize;
-        _index += transferSize;
+        length -= transmitSize;
+        _index += transmitSize;
     }
     if(length){
         queue_Data_Transfer(txpipe, tx_buffer + _index, length, this);
