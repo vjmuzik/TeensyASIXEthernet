@@ -83,21 +83,21 @@ private:
     uint8_t setupdata[16];
     static const uint32_t transferSize = 1024 * 2;
     static const uint32_t transmitSize = 1024 * 2;
-    uint8_t rx_buffer[1024 * 16]; //Enough to queue 8 packets
-    uint8_t current_tx_buffer = 0;
+    
+    volatile uint8_t current_rx_buffer = 0;
+    static const uint8_t num_rx_buffers = 8;
+    uint8_t* rx_buffer;
+    volatile uint8_t rx_buffer0[transferSize * num_rx_buffers];
+    
+    volatile uint8_t current_tx_buffer = 0;
+    static const uint8_t num_tx_buffers = 64;
     uint8_t* tx_buffer;
-    uint8_t tx_buffer1[transmitSize];
-    uint8_t tx_buffer2[transmitSize];
-    uint8_t tx_buffer3[transmitSize];
-    uint8_t tx_buffer4[transmitSize];
-    uint8_t tx_buffer5[transmitSize];
-    uint8_t tx_buffer6[transmitSize];
-    uint8_t tx_buffer7[transmitSize];
-    uint8_t tx_buffer8[transmitSize];
+    volatile uint8_t tx_buffer0[transmitSize * num_tx_buffers];
+    
     uint8_t interrupt_buffer[8];
     
     Pipe_t mypipes[4] __attribute__ ((aligned(32)));
-    Transfer_t mytransfers[32] __attribute__ ((aligned(32)));
+    Transfer_t mytransfers[134] __attribute__ ((aligned(32)));
     strbuf_t mystring_bufs[1];
     void (*handleRecieve)(const uint8_t *data, uint32_t length);
 };

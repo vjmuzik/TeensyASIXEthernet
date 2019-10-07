@@ -131,6 +131,11 @@ bool ASIXEthernet::claim(Device_t *dev, int type, const uint8_t *descriptors, ui
         rxpipe = new_Pipe(dev, 2, rx_ep, 1, rx_size, rx_interval);
         if (rxpipe) {
             rxpipe->callback_function = rx_callback;
+            
+            rx_buffer = (uint8_t*)rx_buffer0 + (current_rx_buffer * transferSize);
+            if(current_rx_buffer == (num_rx_buffers - 1)) current_rx_buffer = 0;
+            else current_rx_buffer++;
+            
             queue_Data_Transfer(rxpipe, rx_buffer, transferSize, this);
             rx_packet_queued++;
         }
@@ -649,19 +654,24 @@ void ASIXEthernet::rx_data(const Transfer_t *transfer) {
     //Current header format is: bytes 6-(length + 6) is ethernet packet
     //Current header format is: bytes (length + 7)-end ie last 3 bytes is unknown possible crc
     uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
-//    println("rx_data(asix): ", len, DEC);
+    if(len > 1000) println("rx_data(asix): ", len, DEC);
 //    print_hexbytes((uint8_t*)transfer->buffer, len);
 //    println("queue another receive packet");
-    (*handleRecieve)((uint8_t*)transfer->buffer, len);
+    rx_buffer = (uint8_t*)rx_buffer0 + (current_rx_buffer * transferSize);
+    if(current_rx_buffer == (num_rx_buffers - 1)) current_rx_buffer = 0;
+    else current_rx_buffer++;
+    
     rx_packet_queued--;
     queue_Data_Transfer(rxpipe, rx_buffer, transferSize, this);
     rx_packet_queued++;
+    
+    (*handleRecieve)((uint8_t*)transfer->buffer, len);
 }
 
 void ASIXEthernet::tx_data(const Transfer_t *transfer) {
     uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
-    println("tx_data(asix): ", len, DEC);
-    print_hexbytes((uint8_t*)transfer->buffer, len);
+    if(len > 1000) println("tx_data(asix): ", len, DEC);
+//    print_hexbytes((uint8_t*)transfer->buffer, len);
     tx_packet_queued--;
 }
 
@@ -690,6 +700,11 @@ bool ASIXEthernet::read() {
     if(pending_control != 254) return false;
     if (!rx_packet_queued && rxpipe) {
         NVIC_DISABLE_IRQ(IRQ_USBHS);
+        
+        rx_buffer = (uint8_t*)rx_buffer0 + (current_rx_buffer * transferSize);
+        if(current_rx_buffer == (num_rx_buffers - 1)) current_rx_buffer = 0;
+        else current_rx_buffer++;
+        
         queue_Data_Transfer(rxpipe, rx_buffer, transferSize, this);
         NVIC_ENABLE_IRQ(IRQ_USBHS);
         rx_packet_queued++;
@@ -698,23 +713,17 @@ bool ASIXEthernet::read() {
 }
 
 void ASIXEthernet::sendPacket(const uint8_t *data, uint32_t length) {
-    if (tx_packet_queued >= 16 || !txpipe) return;
+    if (!txpipe) return;
     if(pending_control != 254) return;
+    
+    tx_buffer = (uint8_t*)tx_buffer0 + (current_tx_buffer * transmitSize);
+    if(current_tx_buffer == (num_tx_buffers - 1)) current_tx_buffer = 0;
+    else current_tx_buffer++;
+
     //Insert USB Header to data message
     //This is the default format and the most basic
     //it can be changed to an alternate format
     //but this is the simplest one that works fine
-    if(current_tx_buffer == 0) tx_buffer = (uint8_t*)tx_buffer1;
-    else if(current_tx_buffer == 1) tx_buffer = (uint8_t*)tx_buffer2;
-    else if(current_tx_buffer == 2) tx_buffer = (uint8_t*)tx_buffer3;
-    else if(current_tx_buffer == 3) tx_buffer = (uint8_t*)tx_buffer4;
-    else if(current_tx_buffer == 4) tx_buffer = (uint8_t*)tx_buffer5;
-    else if(current_tx_buffer == 5) tx_buffer = (uint8_t*)tx_buffer6;
-    else if(current_tx_buffer == 6) tx_buffer = (uint8_t*)tx_buffer7;
-    else if(current_tx_buffer == 7) tx_buffer = (uint8_t*)tx_buffer8;
-    if(current_tx_buffer == 7) current_tx_buffer = 0;
-    else current_tx_buffer++;
-    
     tx_buffer[0] = length & 0x00FF;     //Length of packet LSB
     tx_buffer[1] = (length >> 8) & 0x7; //Length of packet MSB
     tx_buffer[2] = ~length & 0x00FF;                //One's complement Length of packet LSB
