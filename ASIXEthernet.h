@@ -36,6 +36,9 @@ public:
     void setHandleRecieve(void (*fptr)(const uint8_t* data, uint32_t length)) {
         handleRecieve = fptr;
     }
+    void setHandleWait(void (*fptr)()) {
+        handleWait = fptr;
+    }
     void readPHY(uint32_t address, uint16_t *data);
     void writePHY(uint32_t address, uint16_t data);
     void setMulticast(uint8_t *hashTable);
@@ -90,7 +93,7 @@ private:
     volatile uint8_t rx_buffer0[transferSize * num_rx_buffers];
     
     volatile uint8_t current_tx_buffer = 0;
-    static const uint8_t num_tx_buffers = 64;
+    static const uint8_t num_tx_buffers = 32;
     uint8_t* tx_buffer;
     volatile uint8_t tx_buffer0[transmitSize * num_tx_buffers];
     
@@ -100,6 +103,7 @@ private:
     Transfer_t mytransfers[134] __attribute__ ((aligned(32)));
     strbuf_t mystring_bufs[1];
     void (*handleRecieve)(const uint8_t *data, uint32_t length);
+    void (*handleWait)();
 };
 
 #endif /* ASIXEthernet_h */

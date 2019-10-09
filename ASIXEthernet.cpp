@@ -750,6 +750,9 @@ void ASIXEthernet::sendPacket(const uint8_t *data, uint32_t length) {
         queue_Data_Transfer(txpipe, tx_buffer + _index, length, this);
         tx_packet_queued++;
     }
+    while(tx_packet_queued >= num_tx_buffers) {
+        (*handleWait)();
+    }
 }
 
 void ASIXEthernet::readPHY(uint32_t address, uint16_t *data) {
