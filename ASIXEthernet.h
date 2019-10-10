@@ -84,16 +84,16 @@ private:
     
     setup_t setup;
     uint8_t setupdata[16];
-    static const uint32_t transferSize = 1024 * 2;
-    static const uint32_t transmitSize = 1024 * 2;
+    static const uint32_t transferSize = 1024 * 16; //Change recieve buffer size
+    static const uint32_t transmitSize = 1024 * 2;  //Change transmit buffer size
     
     volatile uint8_t current_rx_buffer = 0;
-    static const uint8_t num_rx_buffers = 8;
+    static const uint8_t num_rx_buffers = 1; //Number of recieve buffers
     uint8_t* rx_buffer;
     volatile uint8_t rx_buffer0[transferSize * num_rx_buffers];
     
     volatile uint8_t current_tx_buffer = 0;
-    static const uint8_t num_tx_buffers = 32;
+    static const uint8_t num_tx_buffers = 32; //Number of transmit buffers
     uint8_t* tx_buffer;
     volatile uint8_t tx_buffer0[transmitSize * num_tx_buffers];
     

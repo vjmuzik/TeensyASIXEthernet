@@ -440,11 +440,12 @@ pending:
             break;
         case 41:                                                        //Write transfer size
             //0x8000, 0x8001 2k buffers
+            //0x8100, 0x8147 4k buffers
             //0x8300, 0x83D7 8k buffers
             //0x8400, 0x851E 16k buffers
             //0x8600, 0x87AE 24k buffers
             //0x8700, 0x8A3D 32k buffers
-            mk_setup(setup, 0x40, 42, 0x8000, 0x8001, 0);
+            mk_setup(setup, 0x40, 42, 0x8400, 0x851E, 0);
             queue_Control_Transfer(device, &setup, NULL, this);
             control_queued = true;
             pending_control = 42;
@@ -585,11 +586,12 @@ pending:
             break;
         case 64:                                                        //Write transfer size
             //0x8000, 0x8001 2k buffers
+            //0x8100, 0x8147 4k buffers
             //0x8300, 0x83D7 8k buffers
             //0x8400, 0x851E 16k buffers
             //0x8600, 0x87AE 24k buffers
             //0x8700, 0x8A3D 32k buffers
-            mk_setup(setup, 0x40, 42, 0x8000, 0x8001, 0);
+            mk_setup(setup, 0x40, 42, 0x8400, 0x851E, 0);
             queue_Control_Transfer(device, &setup, NULL, this);
             control_queued = true;
             pending_control = 65;
@@ -654,8 +656,8 @@ void ASIXEthernet::rx_data(const Transfer_t *transfer) {
     //Current header format is: bytes 6-(length + 6) is ethernet packet
     //Current header format is: bytes (length + 7)-end ie last 3 bytes is unknown possible crc
     uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
-    if(len > 1000) println("rx_data(asix): ", len, DEC);
-//    print_hexbytes((uint8_t*)transfer->buffer, len);
+//    if(len > 1000) println("rx_data(asix): ", len, DEC);
+//    if(len > 1000) print_hexbytes((uint8_t*)transfer->buffer, len);
 //    println("queue another receive packet");
     rx_buffer = (uint8_t*)rx_buffer0 + (current_rx_buffer * transferSize);
     if(current_rx_buffer == (num_rx_buffers - 1)) current_rx_buffer = 0;
@@ -669,8 +671,8 @@ void ASIXEthernet::rx_data(const Transfer_t *transfer) {
 }
 
 void ASIXEthernet::tx_data(const Transfer_t *transfer) {
-    uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
-    if(len > 1000) println("tx_data(asix): ", len, DEC);
+//    uint32_t len = transfer->length - ((transfer->qtd.token >> 16) & 0x7FFF);
+//    if(len > 1000) println("tx_data(asix): ", len, DEC);
 //    print_hexbytes((uint8_t*)transfer->buffer, len);
     tx_packet_queued--;
 }
