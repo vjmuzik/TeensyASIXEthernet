@@ -85,7 +85,8 @@ private:
     setup_t setup;
     uint8_t setupdata[16];
     static const uint32_t transferSize = 1024 * 16; //Change recieve buffer size
-    static const uint32_t transmitSize = 1024 * 2;  //Change transmit buffer size
+    static const uint32_t transmitSize = 1518;  //Change transmit buffer size
+                                       //1518 is the max size message that can be sent
     
     volatile uint8_t current_rx_buffer = 0;
     static const uint8_t num_rx_buffers = 1; //Number of recieve buffers
