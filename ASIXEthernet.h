@@ -36,6 +36,9 @@ public:
     void setHandleRecieve(void (*fptr)(const uint8_t* data, uint32_t length)) {
         handleRecieve = fptr;
     }
+    void setPacketTypePromiscuous() {
+        PACKET_TYPE_PROMISCUOUS = true;
+    }
     void setHandleWait(void (*fptr)()) {
         handleWait = fptr;
     }
@@ -59,6 +62,9 @@ protected:
     void interrupt_data(const Transfer_t *transfer);
     void init();
 private:
+    
+    bool PACKET_TYPE_PROMISCUOUS = false;
+    
     uint32_t rx_size;
     uint32_t tx_size;
     uint32_t interrupt_size;

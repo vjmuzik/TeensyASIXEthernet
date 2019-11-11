@@ -457,10 +457,12 @@ pending:
             pending_control = 43;
             break;
         case 43:                                                        //Write Rx Control Register    98 03  Strt Op, MCast, BCast, RX Hdr Mode
-            mk_setup(setup, 0x40, 16, 0x0398, 0, 0);
+            if(PACKET_TYPE_PROMISCUOUS) mk_setup(setup, 0x40, 16, 0x0389, 0, 0);
+            else mk_setup(setup, 0x40, 16, 0x0398, 0, 0);
+            println("Promiscuous: ", PACKET_TYPE_PROMISCUOUS, DEC);
             queue_Control_Transfer(device, &setup, NULL, this);
             control_queued = true;
-            pending_control = 44;
+            pending_control = 45; //Skip multicast filter
             break;
         case 44:{                                                        //Write Multicast Filter Array Register 00 00 00 00  00 00 00 00
             mk_setup(setup, 0x40, 22, 0x0000, 0, 8);
@@ -476,10 +478,12 @@ pending:
             pending_control = 46;
             break;
         case 46:                                                        //Write Rx Control Register    98 03  Strt Op, MCast, BCast, RX Hdr Mode
-            mk_setup(setup, 0x40, 16, 0x03D8, 0, 0);
+            if(PACKET_TYPE_PROMISCUOUS) mk_setup(setup, 0x40, 16, 0x03C9, 0, 0);
+            else mk_setup(setup, 0x40, 16, 0x03C8, 0, 0);
+            println("Promiscuous: ", PACKET_TYPE_PROMISCUOUS, DEC);
             queue_Control_Transfer(device, &setup, NULL, this);
             control_queued = true;
-            pending_control = 47;
+            pending_control = 48; //Skip multicast filter
             break;
         case 47:{                                                        //Write Multicast Filter Array Register 00 40 00 00  00 00 00 00
             mk_setup(setup, 0x40, 22, 0x0000, 0, 8);
@@ -594,7 +598,9 @@ pending:
             mk_setup(setup, 0x40, 42, 0x8400, 0x851E, 0);
             queue_Control_Transfer(device, &setup, NULL, this);
             control_queued = true;
-            pending_control = 65;
+            pending_control = 254; //Skip multicast filter
+            initialized = true;
+            connected = true;
             break;
             
         case 65:{                                                       //This sets the multicast address filter array bitmap, I haven't been able to figure out how this is supposed to be calculated. Their manual doesn't specify too well and all my efforts have been deadends. Setting all these to 0xFF lets all multicast messages through lowering bandwidth for other messages.
